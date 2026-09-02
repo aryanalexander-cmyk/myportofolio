@@ -47,11 +47,11 @@ h1, .brand {
     font-weight: 700;
     color: var(--ink);
     text-decoration: none;
+    transition: transform 0.2s ease-in-out;
 }
 
 .brand:hover {
-    font-size: 1.4rem;
-    color: var(--accent)
+    transform: var(--accent);
 }
 
 .site-header nav {
@@ -139,13 +139,11 @@ h1, .brand {
     background-color: var(--ink);
     border-radius: var(--radius);
     padding: 0.5rem 1.1rem;
-    transition: background-color 0.2s ease;
+    transition: transform 0.2s ease-in-out;
 }
 
 .social-link:hover {
-    background-color: var(--accent);
-    width: 125%;
-    height: 125%;
+    transform: var(--accent), scale(1.1);
 }
 
 .hero-photo {

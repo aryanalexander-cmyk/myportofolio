@@ -49,6 +49,11 @@ h1, .brand {
     text-decoration: none;
 }
 
+.brand:hover {
+    font-size: 1.4rem;
+    color: var(--accent)
+}
+
 .site-header nav {
     display: flex;
     gap: 2rem;
@@ -139,6 +144,8 @@ h1, .brand {
 
 .social-link:hover {
     background-color: var(--accent);
+    width: 125%;
+    height: 125%;
 }
 
 .hero-photo {

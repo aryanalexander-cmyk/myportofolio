@@ -143,8 +143,8 @@ h1, .brand {
 }
 
 .social-link:hover {
-    transform: var(--accent);
-    background-color: scale(1.1);
+    background-color: var(--accent);
+    transform: scale(1.1);
 }
 
 .hero-photo {

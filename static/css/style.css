@@ -131,9 +131,9 @@ h1, h2, h3, .brand {
 .hero-identity h1 {
     font-size: clamp(4rem, 8vw, 6rem);
     line-height: 0.85;
-    color: var(--paper);
-    text-shadow: 4px 4px 0px var(--ink);
-    transform: skewX(5deg); 
+    color: var(--ink);
+    text-shadow: 4px 4px 0px var(--paper);
+    transform: skewX(5deg);
 }
 
 
@@ -141,6 +141,7 @@ h1, h2, h3, .brand {
     grid-area: photo;
     position: relative;
     justify-self: center;
+    perspective: 1000px;
 }
 
 .photo-block {
@@ -153,6 +154,7 @@ h1, h2, h3, .brand {
     border: 4px solid var(--ink);
     transform: rotate(-5deg);
     z-index: 0;
+    transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
 }
 
 .avatar {
@@ -165,6 +167,21 @@ h1, h2, h3, .brand {
     object-fit: cover;
     border: 4px solid var(--ink);
     filter: contrast(1.1) saturate(1.2);
+    transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+
+.hero-photo:hover .photo-block {
+    top: 30px;
+    left: -35px;
+    transform: rotate(-10deg) scale(1.05);
+    background-color: var(--accent-dark);
+}
+
+.hero-photo:hover .avatar {
+    transform: translate(10px, -10px) rotate(2deg);
+    filter: contrast(1.8) grayscale(1);
+    box-shadow: 10px 10px 0px rgba(32, 18, 42, 0.3);
 }
 
 .hero-details {

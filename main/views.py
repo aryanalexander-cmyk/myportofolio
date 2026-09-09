@@ -21,3 +21,9 @@ def show_experience(request):
         "experience_list": Experience.objects.all(),
     }
     return render(request, "experience.html", context)
+
+def show_atelier(request):
+    context = {
+        "name": "Aryan Alexander Rinaldi",
+    }
+    return render(request, "atelier.html")

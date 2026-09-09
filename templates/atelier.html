@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ name }} - Experience</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <header class="site-header">
+        <div class="container">
+            <a href="{% url 'main:show_main' %}" class="brand">{{ name }}</a>
+            <nav class="navs">
+                <a href="{% url 'main:show_main' %}">Profile</a>
+                <a href="{% url 'main:show_experience' %}">Experience</a>
+                <a href="{% url 'main:show_atelier' %}">Atelier</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <section class="navsec" id="atelier">
+            <div class="container">
+                <h2 class="section-heading"><span class="highlight">III.</span> Atelier</h2>
+                <div class="art-gallery">
+                    <a href="/static/img/art1.png" target="_blank" rel="noopener noreferrer" style="text-decoration: none;">
+                        <div class="art-item">
+                            <img src="/static/img/art1.png" alt="Concept art to test metalworks and machinery.">
+                            <div class="art-overlay"><span>View now!</span></div>
+                        </div>
+                    </a>
+                    <a href="https://marlioboro.itch.io/wait-new-rules" target="_blank" rel="noopener noreferrer" style="text-decoration: none;">
+                        <div class="art-item">
+                            <img src="/static/img/art5.png" alt="Wait, New Rule!">
+                        
+                            <div class="art-overlay">
+                                <span>Play now on itch.io!</span>
+                            </div>
+                        </div>
+                    </a>
+                    <a href="https://goodbonesgaming.itch.io/msff-comp" target="_blank" rel="noopener noreferrer" style="text-decoration: none;">
+                        <div class="art-item">
+                            <img src="/static/img/art6.png" alt="MSFF-Compilation">
+                        
+                            <div class="art-overlay">
+                                <span>Play now on itch.io!</span>
+                            </div>
+                        </div>
+                    </a>
+                    <a href="https://goodbonesgaming.itch.io/destructon" target="_blank" rel="noopener noreferrer" style="text-decoration: none;">
+                        <div class="art-item">
+                            <img src="/static/img/art4.png" alt="Destructon">
+                        
+                            <div class="art-overlay">
+                                <span>Play now on itch.io!</span>
+                            </div>
+                        </div>
+                    </a>
+                    <a href="https://marlioboro.itch.io/remora" target="_blank" rel="noopener noreferrer" style="text-decoration: none;">
+                        <div class="art-item">
+                            <img src="/static/img/art3.png" alt="Remora">
+                        
+                            <div class="art-overlay">
+                                <span>Play now on itch.io!</span>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>&copy; 2026 {{ name }}. Fakultas Ilmu Komputer, Universitas Indonesia.</p>
+        </div>
+    </footer>
+</body>
+</html>

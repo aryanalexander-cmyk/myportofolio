@@ -26,4 +26,4 @@ def show_atelier(request):
     context = {
         "name": "Aryan Alexander Rinaldi",
     }
-    return render(request, "atelier.html")
+    return render(request, "atelier.html", context)

@@ -418,46 +418,40 @@ h1, h2, h3, .brand {
 }
 
 .experience-section h1 {
-    padding: 1.5rem;
-    transform: skewX(5deg);
+    margin: 0.4rem 0 1.5rem;
+    font-size: 2rem;
 }
 
 .experience-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem;
 }
 
 .experience-card {
-    display: flex;
-    background-color: var(--ink);
-    color: var(--paper);
-    border: 3px solid var(--accent);
+    padding: 1.25rem;
+    background-color: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
     transform: skewX(-5deg);
     transition: transform 0.2s ease;
 }
 
-.experience-card:hover {
+.experience-card:hover{
     transform: skewX(0deg) scale(1.02);
     box-shadow: var(--shadow);
 }
 
 .experience-category {
-    background-color: var(--accent);
-    color: var(--paper);
-    font-family: "Anton", sans-serif;
-    font-size: 2rem;
-    padding: 3rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 120px;
+    color: var(--accent-dark);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
 }
 
-.experience-card h3 {
-    font-size: 1.5rem;
-    margin-bottom: 0.5rem;
-    color: var(--paper);
+.experience-card h2 {
+    margin: 0.5rem 0;
+    font-size: 1.25rem;
 }
 
 .experience-description,

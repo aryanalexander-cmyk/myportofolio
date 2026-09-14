@@ -11,3 +11,5 @@ P.S. I did use some minor AI assistance through Gemini, mostly on the final bit,
 1. The project's urls.py -> defines the landing page n chooses the views based on the paths, the application url.py -> routes the url to the views it wants, view -> accepts user requests, takes model data, n sends it to the templates, models -> basically the big data form you fill in w things, template -> html file that displays apps
 2. I think moreso just bc itd be easier to like. change around? like, switching and changing things is easier if everythin's less cluttered
 3. makemigrations = makes a migration file but doesnt apply it yet, migrate = applies it to the big database; thhe use to do one or the other is that. well. sometimes you dont wanna immediately apply changes to the big database so ppl can review frist or to avoid conflicts n whatevs.
+
+P.S. I did use some minor AI assistance through Gemini, kinda because I had a problem with the skills not showing up; turns out? i was being a dumbass and copied the atelier's thing to make skills in the views.py instead of using the experiences thing as a base... so it never had the ability to display skills lmao

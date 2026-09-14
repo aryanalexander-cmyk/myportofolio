@@ -23,31 +23,31 @@
     </header>
 
     <main>
-        <section class="experience-section" id="experience">
+        <section class="skills-section" id="skills">
             <div class="container">
-                <p class="section-kicker">My journey so far</p>
-                <h1>Experience</h1>
+                <p class="section-kicker">My skills</p>
+                <h1>Skills</h1>
 
-                <div class="experience-grid">
-                    {% for experience in experience_list %}
-                        <article class="experience-card">
-                            <span class="experience-category">
-                                {{ experience.get_category_display }}
+                <div class="skills-grid">
+                    {% for skill in skills_list %}
+                        <article class="skills-card">
+                            <span class="skills-type">
+                                {{ skill.get_type_display }}
                             </span>
-                            <h2>{{ experience.title }}</h2>
-                            <p class="experience-description">
-                                {{ experience.description }}
+                            <h2>{{ skill.title }}</h2>
+                            <p class="skills-description">
+                                {{ skill.description }}
                             </p>
 
-                            {% if experience.is_ongoing %}
-                                <p class="experience-status">Ongoing</p>
+                            {% if skill.is_ongoing %}
+                                <p class="skills-status">Ongoing</p>
                             {% else %}
-                                <p class="experience-status">Completed</p>
+                                <p class="skills-status">Completed</p>
                             {% endif %}
                         </article>
                     {% empty %}
                         <p class="empty-state">
-                            No experience has been added yet.
+                            No skills have been added yet.
                         </p>
                     {% endfor %}
                 </div>

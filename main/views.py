@@ -27,3 +27,9 @@ def show_atelier(request):
         "name": "Aryan Alexander Rinaldi",
     }
     return render(request, "atelier.html", context)
+
+def show_skills(request):
+    context = {
+        "name": "Aryan Alexander Rinaldi",
+    }
+    return render(request, "skills.html", context)

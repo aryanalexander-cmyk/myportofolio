@@ -80,6 +80,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'portofolio.wsgi.application'
 
+CSRF_TRUSTED_ORIGINS = ["https://aryan-alexander-myportofolio.pws.cs.ui.ac.id"]
 
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases

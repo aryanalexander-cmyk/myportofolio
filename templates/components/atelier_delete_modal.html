@@ -1,40 +1,40 @@
 <p class="experience-status">
     <button type="button"
             class="button button-danger"
-            popovertarget="delete-skills-{{ skills.id }}"
-            aria-label="Delete {{ skills.title }}"
-            title="Delete skill">
-        Delete Skill
+            popovertarget="delete-atelier-{{ atelier.id }}"
+            aria-label="Delete {{ atelier.title }}"
+            title="Delete atelier">
+        Delete Project
     </button>
 </p>
-<div id="delete-skills-{{ skills.id }}"
+<div id="delete-atelier-{{ atelier.id }}"
      class="skills-delete-modal"
      popover="auto"
      role="dialog"
      aria-modal="true"
-     aria-labelledby="delete-skills-title-{{ skills.id }}">
+     aria-labelledby="delete-atelier-title-{{ atelier.id }}">
     <button type="button"
             class="skills-delete-modal__backdrop"
-            popovertarget="delete-skills-{{ skills.id }}"
+            popovertarget="delete-atelier-{{ atelier.id }}"
             popovertargetaction="hide"
             aria-label="Close deletion confirmation"></button>
     <div class="skills-delete-modal__content">
         <button type="button"
                 class="skills-delete-modal__close"
-                popovertarget="delete-skills-{{ skills.id }}"
+                popovertarget="delete-atelier-{{ atelier.id }}"
                 popovertargetaction="hide"
                 aria-label="Close deletion confirmation">×</button>
-        <h2 id="delete-skills-title-{{ skills.id }}">Delete skill?</h2>
+        <h2 id="delete-exp-title-{{ experience.id }}">Delete project?</h2>
         <p>
             Are you certain in erasing
-            <strong>{{ skills.title }}</strong>?
+            <strong>{{ atelier.title }}</strong>?
         </p>
         <div class="skills-delete-modal__actions">
             <button type="button"
                     class="button button-secondary"
-                    popovertarget="delete-skills-{{ skills.id }}"
+                    popovertarget="delete-atelier-{{ atelier.id }}"
                     popovertargetaction="hide">Quit</button>
-            <form method="post" action="{% url 'main:delete_skills' skills.id %}">
+            <form method="post" action="{% url 'main:delete_atelier' atelier.id %}">
                 {% csrf_token %}
                 <button type="submit" class="button button-danger">Proceed with erasure</button>
             </form>

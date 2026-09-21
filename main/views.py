@@ -4,9 +4,8 @@ from django.core import serializers
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render\
 
-from main.models import Experience
-from main.models import Skills
-from main.forms import SkillsForm
+from main.models import Experience, Skills, Atelier
+from main.forms import SkillsForm, ExperienceForm, AtelierForm
 
 
 def show_main(request):
@@ -22,17 +21,80 @@ def show_main(request):
 
 
 def show_experience(request):
+    json_response = get_experience_json(request)
+    experiences = serializers.deserialize("json", json_response.content.decode("utf-8"))
+    experiences = [exp.object for exp in experiences] 
+    title_query = request.GET.get("title", "").strip()
+
     context = {
         "name": "Aryan Alexander Rinaldi",
-        "experience_list": Experience.objects.all(),
+        "experience_list": experiences,
+        "title_query": title_query,
     }
     return render(request, "experience.html", context)
 
+def create_experience(request):
+    form = ExperienceForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Experience successfully added!")
+        return redirect("main:show_experience")
+
+    context = {"name": "Aryan A. Rinaldi", "form": form}
+    return render(request, "experience_form.html", context)
+
+def delete_experience(request, experience_id):
+    experience = get_object_or_404(Experience, pk=experience_id)
+    if request.method == "POST":
+        experience.delete()
+        messages.success(request, "Experience deleted!")
+    return redirect("main:show_experience")
+
+def get_experience_json(request):
+    title_query = request.GET.get("title", "").strip()
+    experiences = Experience.objects.all()
+    if title_query:
+        experiences = experiences.filter(title__icontains=title_query)
+    return HttpResponse(serializers.serialize("json", experiences), content_type="application/json")
+
+
+# --- ATELIER VIEWS ---
 def show_atelier(request):
+    json_response = get_atelier_json(request)
+    ateliers = serializers.deserialize("json", json_response.content.decode("utf-8"))
+    ateliers = [item.object for item in ateliers] 
+    title_query = request.GET.get("title", "").strip()
+
     context = {
         "name": "Aryan Alexander Rinaldi",
+        "atelier_list": ateliers,
+        "title_query": title_query,
     }
     return render(request, "atelier.html", context)
+
+def create_atelier(request):
+    form = AtelierForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Project successfully added!")
+        return redirect("main:show_atelier")
+
+    context = {"name": "Aryan A. Rinaldi", "form": form}
+    return render(request, "atelier_form.html", context)
+
+def delete_atelier(request, atelier_id):
+    atelier = get_object_or_404(Atelier, pk=atelier_id)
+    if request.method == "POST":
+        atelier.delete()
+        messages.success(request, "Project deleted!")
+    return redirect("main:show_atelier")
+
+def get_atelier_json(request):
+    title_query = request.GET.get("title", "").strip()
+    ateliers = Atelier.objects.all()
+    if title_query:
+        ateliers = ateliers.filter(title__icontains=title_query)
+    return HttpResponse(serializers.serialize("json", ateliers), content_type="application/json")
 
 def show_skills(request):
     json_response = get_skills_json(request)
@@ -49,7 +111,6 @@ def show_skills(request):
         "skills_list": skills,
         "title_query": title_query,
     }
-    # Fixed: render the correct template
     return render(request, "skills.html", context)
 
 def delete_skills(request, skills_id):

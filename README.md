@@ -13,3 +13,11 @@ P.S. I did use some minor AI assistance through Gemini, mostly on the final bit,
 3. makemigrations = makes a migration file but doesnt apply it yet, migrate = applies it to the big database; thhe use to do one or the other is that. well. sometimes you dont wanna immediately apply changes to the big database so ppl can review frist or to avoid conflicts n whatevs.
 
 P.S. I did use some minor AI assistance through Gemini, kinda because I had a problem with the skills not showing up; turns out? i was being a dumbass and copied the atelier's thing to make skills in the views.py instead of using the experiences thing as a base... so it never had the ability to display skills lmao
+
+### Individual Assignment 2
+
+1. uh... iirc it's because JSON is like. integrated with javascript right? like, it's natively compatible, unlike w/ XML where you gootta do some finagling to get it to work w the shit that's alr present in Django
+2. Client sends HTTP request mapped to a specified view -> the view uses Django's ORM to query the database for the requested data -> Database returns data as python objects -> view passes that to a serializer which formats it into a JSON-formatted text string -> View packages the string into an HTTP response and sends that back over to the client
+3. Because netowrk protocols like HTTP and frontend browsers can't exactly read oor understand native python objects, so serialization translates it into smth they can actually read
+
+P.S. I. may have forgotten to write this yesterday (Monday, 21st of September 2026). Just goes to show I should not do this while nursing a headache...

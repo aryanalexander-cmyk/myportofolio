@@ -11,11 +11,13 @@
                 <p class="section-kicker">My skills</p>
                 <div class="skills-header">
                     <h1>Skills</h1>
+                    {% if user.is_superuser %}
                     <a href="{% url 'main:create_skills' %}"
                        class="button skills-add-button">
                         <span aria-hidden="true">+</span>
                         Add Skills
                     </a>
+                    {% endif %}
                 </div>
                 <form method="get"
                       action="{% url 'main:show_skills' %}"
@@ -35,7 +37,9 @@
                             <p class="experience-description">{{ skills.description }}</p>
                             <div class="skills-card-actions">
                                 <div class="skills-actions">
-                                    {% include "components/skills_delete_modal.html" with skills=skills %}
+                                    {% if user.is_superuser %}
+                                        {% include "components/skills_delete_modal.html" with skills=skills %}
+                                    {% endif %}
                                 </div>
                             </div>
                         </article>

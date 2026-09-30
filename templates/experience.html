@@ -12,9 +12,11 @@
                 <p class="section-kicker">My journey so far</p>
                 <div class="skills-header">
                     <h1>Experience</h1>
+                    {% if user.is_superuser %}
                     <a href="{% url 'main:create_experience' %}" class="button skills-add-button">
                         <span aria-hidden="true">+</span> Add Experience
                     </a>
+                    {% endif %}
                 </div>
                 
                 <form method="get" action="{% url 'main:show_experience' %}" class="skills-search">
@@ -31,7 +33,10 @@
                             <p class="experience-status">{% if experience.is_ongoing %}Ongoing{% else %}Completed{% endif %}</p>
                             
                             <div class="skills-card-actions">
-                                {% include "components/experience_delete_modal.html" with experience=experience %}
+                                {% if user.is_superuser %}
+                                    {% include "components/experience_delete_modal.html" with experience=experience %}
+                                {% endif %}
+                                
                             </div>
                         </article>
                     {% empty %}

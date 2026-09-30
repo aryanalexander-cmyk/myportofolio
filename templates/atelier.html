@@ -1,5 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
+
 {% extends "base.html" %}
 {% block meta %}
     <title>Atelier - {{ name }}</title>
@@ -12,9 +11,11 @@
                 <p class="section-kicker">My previous works</p>
                 <div class="skills-header">
                     <h1>Atelier</h1>
+                    {% if user.is_superuser %}
                     <a href="{% url 'main:create_atelier' %}" class="button skills-add-button">
                         <span aria-hidden="true">+</span> Add Project
                     </a>
+                    {% endif %}
                 </div>
 
                 <form method="get" action="{% url 'main:show_atelier' %}" class="skills-search">
@@ -32,7 +33,11 @@
                                 </div>
                             </a>
                             <div style="position: absolute; top: 10px; right: 10px; z-index: 10;">
-                                {% include "components/atelier_delete_modal.html" with atelier=item %}
+                                
+                                {% if user.is_superuser %}
+                                    {% include "components/project_star.html" with project=item %}
+                                    {% include "components/atelier_delete_modal.html" with atelier=item %}
+                                {% endif %}
                             </div>
                         </article>
                     {% empty %}

@@ -1,4 +1,3 @@
-
 {% extends "base.html" %}
 {% block meta %}
     <title>Atelier - {{ name }}</title>
@@ -12,40 +11,288 @@
                 <div class="skills-header">
                     <h1>Atelier</h1>
                     {% if user.is_superuser %}
-                    <a href="{% url 'main:create_atelier' %}" class="button skills-add-button">
-                        <span aria-hidden="true">+</span> Add Project
-                    </a>
+                    <button type="button"
+                            class="button project-add-button"
+                            popovertarget="add-atelier-modal">
+                        <span aria-hidden="true">+</span>
+                        Add Project
+                    </button>
                     {% endif %}
                 </div>
 
-                <form method="get" action="{% url 'main:show_atelier' %}" class="skills-search">
-                    <input type="search" name="title" value="{{ title_query }}" placeholder="Search projects..." class="skill-search__input">
+                <!-- AJAX Search Form -->
+                <form id="project-search-form" class="skills-search">
+                    <input type="search"
+                           id="search-input"
+                           name="title"
+                           value="{{ title_query }}"
+                           placeholder="Search projects..."
+                           class="skill-search__input"
+                           aria-label="Search projects">
                     <button type="submit" class="button">Search</button>
                 </form>
 
-                <div class="art-gallery">
-                    {% for item in atelier_list %}
-                        <article style="position: relative;">
-                            <a href="{{ item.project_url }}" target="_blank" rel="noopener noreferrer" style="text-decoration: none;">
-                                <div class="art-item">
-                                    <img src="{{ item.image_url }}" alt="{{ item.title }}">
-                                    <div class="art-overlay"><span>{{ item.title }}</span></div>
-                                </div>
-                            </a>
-                            <div style="position: absolute; top: 10px; right: 10px; z-index: 10;">
-                                
-                                {% if user.is_superuser %}
-                                    {% include "components/project_star.html" with project=item %}
-                                    {% include "components/atelier_delete_modal.html" with atelier=item %}
-                                {% endif %}
-                            </div>
-                        </article>
-                    {% empty %}
-                        <p class="empty-state">No projects found.</p>
-                    {% endfor %}
+                <!-- Loading State -->
+                <div id="loading" class="empty-state hide">
+                    <p>Loading projects...</p>
                 </div>
+
+                <!-- Error State -->
+                <div id="error" class="empty-state hide">
+                    <p>Failed to load project data. Please try again.</p>
+                </div>
+
+                <!-- Empty State -->
+                <div id="empty" class="empty-state hide">
+                    <p>No projects have been added or found yet.</p>
+                </div>
+
+                <!-- Project Grid -->
+                <div id="grid" class="art-gallery hide"></div>
             </div>
         </section>
     </main>
+
+    {% if user.is_superuser %}
+        {% include "components/atelier_form_modal.html" %}
+    {% endif %}
+
+    <script>
+        // Configuration
+        const BASE_ATELIER_ENDPOINT = "{% url 'main:get_atelier_json' %}";
+        const CREATE_PROJECT_ENDPOINT = "{% url 'main:create_project_ajax' %}";
+        const IS_SUPERUSER = "{{ user.is_superuser|yesno:'true,false' }}" === "true";
+        let projectsAbortController;
+
+        // DOM elements
+        const loadingState = document.getElementById('loading');
+        const errorState = document.getElementById('error');
+        const emptyState = document.getElementById('empty');
+        const gridContainer = document.getElementById('grid');
+        const searchForm = document.getElementById('project-search-form');
+        const searchInput = document.getElementById('search-input');
+        const projectForm = document.getElementById('atelier-form');
+        
+        const SEARCH_DEBOUNCE_DELAY = 300;
+        let searchDebounceTimer;
+
+        // Helper function to escape HTML and prevent XSS
+        function escapeHtml(text) {
+            if (text == null) return '';
+            return text.toString()
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // Read a cookie value, used to get the CSRF token
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Show/hide page sections
+        function displayPageSection({ showLoading = false, showError = false, showEmpty = false, showGrid = false }) {
+            loadingState.classList.toggle('hide', !showLoading);
+            errorState.classList.toggle('hide', !showError);
+            emptyState.classList.toggle('hide', !showEmpty);
+            gridContainer.classList.toggle('hide', !showGrid);
+        }
+
+        // Build an Atelier card element
+        function buildProjectCardElement(item) {
+            const project = item.fields;
+            const projectId = item.pk;
+
+            const articleElement = document.createElement('article');
+            articleElement.style.position = 'relative';
+
+            // A dummy UUID used as a placeholder to be replaced with the real ID from the JSON data
+            const deleteUrl = "{% url 'main:delete_atelier' '00000000-0000-0000-0000-000000000000' %}"
+                .replace('00000000-0000-0000-0000-000000000000', projectId);
+            
+            // NOTE: Make sure the URL name matches what you mapped in urls.py for toggle_star
+            const starUrl = "{% url 'main:toggle_star' '00000000-0000-0000-0000-000000000000' %}"
+                .replace('00000000-0000-0000-0000-000000000000', projectId);
+
+            // Admin Actions (Only show Star/Delete logic if Superuser)
+            let adminHtml = '';
+            if (IS_SUPERUSER) {
+                const isStarredClass = project.is_starred ? " is-starred" : "";
+                const starText = project.is_starred ? "Unstar" : "Star";
+                const starTitle = project.star_count > 0 
+                    ? `Starred by ${escapeHtml(project.starred_by_names)}` 
+                    : "Be the first to star";
+
+                adminHtml = `
+                    <div style="position: absolute; top: 10px; right: 10px; z-index: 10; display: flex; gap: 8px;">
+                        <form method="post" action="${starUrl}" class="star-form">
+                            {% csrf_token %}
+                            <button type="submit" class="button button-star${isStarredClass}" title="${starTitle}">
+                                <span aria-hidden="true">★</span>
+                                ${starText} <span class="star-count">${project.star_count}</span>
+                            </button>
+                        </form>
+                        
+                        <form method="post" action="${deleteUrl}">
+                            {% csrf_token %}
+                            <button type="submit" class="button" style="background-color: #dc3545; color: white;" onclick="return confirm('Are you sure you want to delete this project?');">
+                                Delete
+                            </button>
+                        </form>
+                    </div>
+                `;
+            }
+
+            // Sanitized image and URL checks
+            const imageHtml = project.image_url 
+                ? `<img src="${escapeHtml(project.image_url)}" alt="Image of ${escapeHtml(project.title)}">` 
+                : '';
+
+            // Card component layout matching the old art-gallery structure
+            const completeCardHtml = `
+                <a href="${escapeHtml(project.project_url)}" target="_blank" rel="noopener noreferrer" style="text-decoration: none;">
+                    <div class="art-item">
+                        ${imageHtml}
+                        <div class="art-overlay"><span>${escapeHtml(project.title)}</span></div>
+                    </div>
+                </a>
+                ${adminHtml}
+            `;
+
+            articleElement.innerHTML = completeCardHtml;
+            return articleElement;
+        }
+
+        // Fetch project data
+        async function fetchProjects(searchQuery = "") {
+            if (projectsAbortController) projectsAbortController.abort();
+            projectsAbortController = new AbortController();
+
+            try {
+                displayPageSection({ showLoading: true });
+                
+                const url = searchQuery 
+                    ? `${BASE_ATELIER_ENDPOINT}?title=${encodeURIComponent(searchQuery)}` 
+                    : BASE_ATELIER_ENDPOINT;
+                
+                const response = await fetch(url, {
+                    headers: { 'Accept': 'application/json' },
+                    signal: projectsAbortController.signal,
+                });
+
+                if (!response.ok) throw new Error('Failed to fetch data');
+
+                const projectData = await response.json();
+
+                if (projectData.length === 0) {
+                    displayPageSection({ showEmpty: true });
+                } else {
+                    gridContainer.innerHTML = '';
+                    projectData.forEach(item => {
+                        gridContainer.appendChild(buildProjectCardElement(item));
+                    });
+                    displayPageSection({ showGrid: true });
+                }
+
+            } catch (error) {
+                if (error.name === 'AbortError') return;
+                console.error('Error loading projects:', error);
+                displayPageSection({ showError: true });
+            }
+        }
+
+        // Run the search fetch
+        function searchProjects() {
+            fetchProjects(searchInput.value.trim());
+        }
+
+        function closeProjectModal() {
+            document.getElementById("add-atelier-modal").hidePopover();
+        }
+
+        // Send the form data to the server
+        async function addProject(event) {
+            event.preventDefault();
+
+            const submitButton = projectForm.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+
+            try {
+                const response = await fetch(CREATE_PROJECT_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                    body: new FormData(projectForm),
+                });
+                const result = await response.json().catch(() => ({}));
+
+                if (response.ok) {
+                    projectForm.reset();
+                    closeProjectModal();
+                    
+                    if (typeof showToast === "function") {
+                        showToast('Success', 'New project added successfully!', 'success');
+                    } else {
+                        alert('New project added successfully!');
+                    }
+                    
+                    fetchProjects(searchInput.value.trim());
+                } else {
+                    const errorMessages = result.errors
+                        ? Object.values(result.errors).flat().map(error => error.message)
+                        : [result.message || `Something went wrong (status ${response.status}).`];
+                    
+                    if (typeof showToast === "function") {
+                        showToast('Failed to add project', errorMessages.join(' '), 'error');
+                    } else {
+                        alert('Failed to add project: ' + errorMessages.join(' '));
+                    }
+                }
+            } catch (error) {
+                console.error('Error adding project:', error);
+                if (typeof showToast === "function") {
+                    showToast('Failed to add project', 'Could not reach the server. Please try again.', 'error');
+                } else {
+                    alert('Could not reach the server. Please try again.');
+                }
+            } finally {
+                submitButton.disabled = false;
+            }
+        }
+
+        // Trigger search automatically while typing (debounced)
+        searchInput.addEventListener("input", function() {
+            clearTimeout(searchDebounceTimer);
+
+            searchDebounceTimer = setTimeout(function() {
+                searchProjects();
+            }, SEARCH_DEBOUNCE_DELAY);
+        });
+
+        // Trigger search immediately on manual submit (Enter key or button click)
+        searchForm.addEventListener("submit", function(event) {
+            event.preventDefault();
+            clearTimeout(searchDebounceTimer); // Prevent double-fetching if a debounce is already pending
+            searchProjects();
+        });
+
+        if (projectForm) {
+            projectForm.addEventListener('submit', addProject);
+        }
+
+        // Start the application
+        fetchProjects(searchInput.value.trim());
+    </script>
 {% endblock content %}
-</html>

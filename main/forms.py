@@ -1,4 +1,6 @@
 from django.forms import ModelForm, TextInput, Textarea
+from django.core.exceptions import ValidationError
+from django.utils.html import strip_tags
 from main.models import Experience, Skills, Atelier
 
 class ExperienceForm(ModelForm):
@@ -28,6 +30,24 @@ class AtelierForm(ModelForm):
         widgets = {
             "title": TextInput(attrs={"placeholder": "e.g., Destructon", "maxlength": 255}),
         }
+
+    def clean_title(self):
+        title = strip_tags(self.cleaned_data["title"]).strip()
+        if not title:
+            raise ValidationError("Project name can't contain only HTML tags.")
+        return title
+        
+    def clean_project_url(self):
+        url = self.cleaned_data.get("project_url", "")
+        if url:
+            return strip_tags(url).strip()
+        return url
+
+    def clean_image_url(self):
+        url = self.cleaned_data.get("image_url", "")
+        if url:
+            return strip_tags(url).strip()
+        return url
 
 class SkillsForm(ModelForm):
     class Meta:

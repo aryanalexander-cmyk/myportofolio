@@ -7,13 +7,33 @@ from django.contrib import messages
 from django.core import serializers
 from django.http import HttpResponse
 import datetime
+from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required  
 from django.core.exceptions import PermissionDenied        
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
 
 
 from main.models import Experience, Skills, Atelier
 from main.forms import SkillsForm, ExperienceForm, AtelierForm
+
+@require_POST
+def create_project_ajax(request):
+    if not request.user.is_superuser:
+        return JsonResponse(
+            {"message": "Only the portfolio owner can add projects."},
+            status=403,
+        )
+
+    form = AtelierForm(request.POST)
+    if form.is_valid():
+        project = form.save()
+        return JsonResponse(
+            {"message": "Project added successfully.", "pk": str(project.id)},
+            status=201,
+        )
+
+    return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
 
 
 def show_main(request):
@@ -77,16 +97,13 @@ def get_experience_json(request):
 
 
 # --- ATELIER VIEWS ---
-def show_atelier(request):
-    json_response = get_atelier_json(request)
-    ateliers = serializers.deserialize("json", json_response.content.decode("utf-8"))
-    ateliers = [item.object for item in ateliers] 
+def show_atelier(request): 
     title_query = request.GET.get("title", "").strip()
 
     context = {
         "name": "Aryan Alexander Rinaldi",
-        "atelier_list": ateliers,
         "title_query": title_query,
+        "form": AtelierForm(),
     }
     return render(request, "atelier.html", context)
 
@@ -117,11 +134,32 @@ def delete_atelier(request, atelier_id):
 
 def get_atelier_json(request):
     title_query = request.GET.get("title", "").strip()
-    ateliers = Atelier.objects.all()
+    # Use Atelier model instead of Project
+    ateliers = Atelier.objects.prefetch_related('starred_by').all()
+
     if title_query:
         ateliers = ateliers.filter(title__icontains=title_query)
-        "json", ateliers, use_natural_foreign_keys=True
-    return HttpResponse(serializers.serialize("json", ateliers), content_type="application/json")
+
+    
+    data = []
+    for atelier in ateliers:
+        starred_users = atelier.starred_by.all()
+        is_starred = request.user in starred_users if request.user.is_authenticated else False
+        starred_by_names = ", ".join([u.username for u in starred_users])
+
+        data.append({
+            "pk": str(atelier.id),
+            "fields": {
+                "title": atelier.title,
+                "project_url": atelier.project_url,
+                "image_url": atelier.image_url,
+                "star_count": starred_users.count(),
+                "is_starred": is_starred,
+                "starred_by_names": starred_by_names,
+            }
+        })
+
+    return JsonResponse(data, safe=False)
 
 def show_skills(request):
     json_response = get_skills_json(request)

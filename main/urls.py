@@ -21,4 +21,5 @@ urlpatterns = [
     path("login/", login_user, name="login"),
     path("logout/", logout_user, name="logout"),
     path("atelier/<uuid:atelier_id>/star/",toggle_star,name="toggle_star",),
+    path("projects/add-ajax/", create_project_ajax, name="create_project_ajax"),
 ]

@@ -14,8 +14,18 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 
-from main.models import Experience, Skills, Atelier
-from main.forms import SkillsForm, ExperienceForm, AtelierForm
+from main.models import Experience, Skills, Atelier, Project
+from main.forms import SkillsForm, ExperienceForm, AtelierForm, ProjectForm
+
+def show_projects(request):
+    title_query = request.GET.get("title", "").strip()
+    context = {
+        "name": "Aryan Alexander Rinaldi",
+        "title_query": title_query,
+        "form": ProjectForm(),
+    }
+    return render(request, "project.html", context)
+
 
 @require_POST
 def create_project_ajax(request):

@@ -5,6 +5,7 @@ app_name = "main"
 
 urlpatterns = [
     path("", show_main, name="show_main"),
+    path("projects/", show_projects, name="show_projects"),
     path("experience/", show_experience, name="show_experience"),
     path("experience/add/", create_experience, name="create_experience"),
     path("api/experience/", get_experience_json, name="get_experience_json"),

@@ -1,7 +1,43 @@
 from django.forms import ModelForm, TextInput, Textarea
 from django.core.exceptions import ValidationError
 from django.utils.html import strip_tags
-from main.models import Experience, Skills, Atelier
+from main.models import Experience, Skills, Atelier, Project
+
+class ProjectForm(ModelForm):
+    class Meta:
+        model = Project
+        fields = ["title", "description", "tech_stack", "project_url", "project_image_url"]
+        labels = {
+            "title": "Project Title",
+            "description": "Description",
+            "tech_stack": "Tech Stack",
+            "project_url": "Project Link",
+            "project_image_url": "Thumbnail Image URL",
+        }
+        widgets = {
+            "title": TextInput(attrs={"placeholder": "e.g., Portfolio Website", "maxlength": 255}),
+            "description": Textarea(attrs={"placeholder": "Describe your project", "rows": 3}),
+            "tech_stack": TextInput(attrs={"placeholder": "e.g., Django, DRF, JavaScript", "maxlength": 255}),
+        }
+
+    def clean_title(self):
+        title = strip_tags(self.cleaned_data["title"]).strip()
+        if not title:
+            raise ValidationError("Title cannot be empty.")
+        return title
+
+    def clean_description(self):
+        return strip_tags(self.cleaned_data.get("description", ""))
+
+    def clean_tech_stack(self):
+        return strip_tags(self.cleaned_data.get("tech_stack", ""))
+
+    def clean_project_url(self):
+        return strip_tags(self.cleaned_data.get("project_url", "")).strip()
+
+    def clean_project_image_url(self):
+        return strip_tags(self.cleaned_data.get("project_image_url", "")).strip()
+
 
 class ExperienceForm(ModelForm):
     class Meta:

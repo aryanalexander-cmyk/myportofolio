@@ -1,5 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
 {% extends "base.html" %}
 {% block meta %}
     <title>Skills - {{ name }}</title>
@@ -12,47 +10,344 @@
                 <div class="skills-header">
                     <h1>Skills</h1>
                     {% if user.is_superuser %}
-                    <a href="{% url 'main:create_skills' %}"
-                       class="button skills-add-button">
-                        <span aria-hidden="true">+</span>
-                        Add Skills
-                    </a>
+                    <button type="button" class="button skills-add-button" popovertarget="add-skills-modal">
+                        <span aria-hidden="true">+</span> Add Skills
+                    </button>
                     {% endif %}
                 </div>
-                <form method="get"
+
+                <form id="skills-search-form"
+                      method="get"
                       action="{% url 'main:show_skills' %}"
                       class="skills-search">
                     <input type="search"
+                           id="search-input"
                            name="title"
                            value="{{ title_query }}"
                            placeholder="Search based on skill name"
                            class="skill-search__input"
                            aria-label="Search based on skill name">
-                    <button type="submit" class="button">Cari</button>
+                    <button type="submit" class="button">Search</button>
                 </form>
-                <div class="experience-grid skills-grid">
-                    {% for skill in skills %}
+
+                <!-- Loading State -->
+                <div id="loading" class="empty-state hide">
+                    <p>Loading skills...</p>
+                </div>
+
+                <!-- Error State -->
+                <div id="error" class="empty-state hide">
+                    <p>Failed to load skills data. Please try again.</p>
+                </div>
+
+                <!-- Empty State -->
+                <div id="empty" class="empty-state hide">
+                    <p>No skills have been added.</p>
+                </div>
+
+                <div id="grid" class="experience-grid skills-grid">
+                    {% for skill in skills_list %}
                         <article class="experience-card">
-                            <h2>{{ project.title }}</h2>
-                            <p class="experience-description">{{ skills.description }}</p>
+                            <span class="experience-category">{{ skill.get_type_display }}</span>
+                            <h2>{{ skill.title }}</h2>
+                            <p class="experience-description">{{ skill.description }}</p>
                             <div class="skills-card-actions">
-                                <div class="skills-actions">
+                                <div class="skills-actions" style="display: flex; gap: 8px;">
+                                    {% if user.is_superuser or is_editor %}
+                                    <button type="button"
+                                            class="button"
+                                            data-action="edit"
+                                            data-id="{{ skill.id }}"
+                                            data-title="{{ skill.title }}"
+                                            data-type="{{ skill.type }}"
+                                            data-description="{{ skill.description }}"
+                                            data-thumbnail="{{ skill.thumbnail|default:'' }}">
+                                        Edit
+                                    </button>
+                                    {% endif %}
                                     {% if user.is_superuser %}
-                                        {% include "components/skills_delete_modal.html" with skills=skills %}
+                                    <button type="button"
+                                            class="button"
+                                            style="background-color: #dc3545; color: white;"
+                                            data-action="delete"
+                                            data-id="{{ skill.id }}">
+                                        Delete
+                                    </button>
                                     {% endif %}
                                 </div>
                             </div>
                         </article>
                     {% empty %}
-                        {% if title_query %}
-                            <p class="empty-state">No skill with that name.</p>
-                        {% else %}
-                            <p class="empty-state">No skills have been added.</p>
-                        {% endif %}
+                        <p class="empty-state">No skills have been added.</p>
                     {% endfor %}
                 </div>
             </div>
         </section>
     </main>
+
+    {% if user.is_superuser %}
+        {% include "components/skills_form_modal.html" %}
+    {% endif %}
+
+    {% if user.is_superuser or is_editor %}
+        {% include "components/skills_edit_modal.html" %}
+    {% endif %}
+
+    {% csrf_token %}
+    <script>
+        const BASE_SKILLS_ENDPOINT = "{% url 'api:skills-list' %}";
+        const DETAIL_SKILLS_ENDPOINT = "{% url 'api:skills-detail' '00000000-0000-0000-0000-000000000000' %}";
+        const IS_SUPERUSER = "{{ user.is_superuser|yesno:'true,false' }}" === "true";
+        const IS_EDITOR = "{{ is_editor|yesno:'true,false' }}" === "true";
+        const CAN_EDIT = IS_SUPERUSER || IS_EDITOR;
+
+        const loadingState = document.getElementById('loading');
+        const errorState = document.getElementById('error');
+        const emptyState = document.getElementById('empty');
+        const gridContainer = document.getElementById('grid');
+        const searchForm = document.getElementById('skills-search-form');
+        const searchInput = document.getElementById('search-input');
+        const skillsForm = document.getElementById('skills-form');
+        const editSkillsForm = document.getElementById('edit-skills-form');
+
+        let skillsAbortController;
+        let searchDebounceTimer;
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        function escapeHtml(text) {
+            if (text == null) return '';
+            return text.toString()
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function skillEndpoint(pattern, id) {
+            return pattern.replace('00000000-0000-0000-0000-000000000000', id);
+        }
+
+        function displayPageSection({ showLoading = false, showError = false, showEmpty = false, showGrid = false }) {
+            loadingState.classList.toggle('hide', !showLoading);
+            errorState.classList.toggle('hide', !showError);
+            emptyState.classList.toggle('hide', !showEmpty);
+            gridContainer.classList.toggle('hide', !showGrid);
+        }
+
+        function buildSkillCardElement(item) {
+            const article = document.createElement('article');
+            article.className = 'experience-card';
+
+            let buttons = [];
+            if (CAN_EDIT) {
+                buttons.push(`
+                    <button type="button" class="button" data-action="edit"
+                            data-id="${escapeHtml(item.id)}"
+                            data-title="${escapeHtml(item.title)}"
+                            data-type="${escapeHtml(item.type)}"
+                            data-description="${escapeHtml(item.description)}"
+                            data-thumbnail="${escapeHtml(item.thumbnail || '')}">
+                        Edit
+                    </button>
+                `);
+            }
+            if (IS_SUPERUSER) {
+                buttons.push(`
+                    <button type="button" class="button" style="background-color: #dc3545; color: white;"
+                            data-action="delete" data-id="${escapeHtml(item.id)}">
+                        Delete
+                    </button>
+                `);
+            }
+
+            let actionsHtml = '';
+            if (buttons.length > 0) {
+                actionsHtml = `
+                    <div class="skills-card-actions">
+                        <div class="skills-actions" style="display: flex; gap: 8px;">
+                            ${buttons.join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            article.innerHTML = `
+                <span class="experience-category">${escapeHtml(item.type_display || item.type)}</span>
+                <h2>${escapeHtml(item.title)}</h2>
+                <p class="experience-description">${escapeHtml(item.description)}</p>
+                ${actionsHtml}
+            `;
+            return article;
+        }
+
+        function apiErrorMessage(data, status) {
+            if (data && typeof data === 'object') {
+                if (typeof data.detail === 'string') return data.detail;
+                const messages = Object.values(data).flat().filter(v => typeof v === 'string');
+                if (messages.length > 0) return messages.join(' ');
+            }
+            return `Request failed (HTTP ${status}).`;
+        }
+
+        async function writeSkill(url, method, payload) {
+            const response = await fetch(url, {
+                method,
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken'),
+                },
+                body: payload === undefined ? undefined : JSON.stringify(payload),
+            });
+            if (response.status === 204) return null;
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(apiErrorMessage(data, response.status));
+            return data;
+        }
+
+        async function fetchSkills(searchQuery = "") {
+            if (skillsAbortController) skillsAbortController.abort();
+            skillsAbortController = new AbortController();
+
+            try {
+                displayPageSection({ showLoading: true });
+                const url = new URL(BASE_SKILLS_ENDPOINT, window.location.origin);
+                if (searchQuery) url.searchParams.set('title', searchQuery);
+
+                const response = await fetch(url, {
+                    headers: { 'Accept': 'application/json' },
+                    signal: skillsAbortController.signal,
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+
+                if (data.length === 0) {
+                    displayPageSection({ showEmpty: true });
+                } else {
+                    gridContainer.replaceChildren(...data.map(buildSkillCardElement));
+                    displayPageSection({ showGrid: true });
+                }
+            } catch (error) {
+                if (error.name === 'AbortError') return;
+                console.error('Error loading skills:', error);
+                displayPageSection({ showError: true });
+            }
+        }
+
+        // Add Skill Form Submit
+        if (skillsForm) {
+            skillsForm.addEventListener('submit', async function(event) {
+                event.preventDefault();
+                const submitBtn = skillsForm.querySelector('button[type="submit"]');
+                submitBtn.disabled = true;
+                try {
+                    const fields = new FormData(skillsForm);
+                    const payload = {
+                        title: fields.get('title'),
+                        type: fields.get('type'),
+                        description: fields.get('description'),
+                    };
+                    await writeSkill(BASE_SKILLS_ENDPOINT, 'POST', payload);
+                    skillsForm.reset();
+                    const modal = document.getElementById('add-skills-modal');
+                    if (modal && typeof modal.hidePopover === 'function') modal.hidePopover();
+                    showToast('Success', 'Skill created.', 'success');
+                    await fetchSkills(searchInput.value.trim());
+                } catch (error) {
+                    showToast('Could not create skill', error.message, 'error');
+                } finally {
+                    submitBtn.disabled = false;
+                }
+            });
+        }
+
+        // Edit Skill Form Submit
+        if (editSkillsForm) {
+            editSkillsForm.addEventListener('submit', async function(event) {
+                event.preventDefault();
+                const submitBtn = editSkillsForm.querySelector('button[type="submit"]');
+                submitBtn.disabled = true;
+                try {
+                    const skillId = document.getElementById('edit-skills-id').value;
+                    const payload = {
+                        title: document.getElementById('edit-skills-title').value,
+                        type: document.getElementById('edit-skills-type').value,
+                        description: document.getElementById('edit-skills-description').value,
+                        thumbnail: document.getElementById('edit-skills-thumbnail').value || '',
+                    };
+                    await writeSkill(skillEndpoint(DETAIL_SKILLS_ENDPOINT, skillId), 'PATCH', payload);
+                    editSkillsForm.reset();
+                    const modal = document.getElementById('edit-skills-modal');
+                    if (modal && typeof modal.hidePopover === 'function') modal.hidePopover();
+                    showToast('Success', 'Skill updated.', 'success');
+                    await fetchSkills(searchInput.value.trim());
+                } catch (error) {
+                    showToast('Could not update skill', error.message, 'error');
+                } finally {
+                    submitBtn.disabled = false;
+                }
+            });
+        }
+
+        // Grid Container delegation
+        gridContainer.addEventListener('click', async function(event) {
+            const button = event.target.closest('button[data-action]');
+            if (!button || button.disabled) return;
+            const action = button.dataset.action;
+
+            if (action === 'edit') {
+                const editModal = document.getElementById('edit-skills-modal');
+                if (editModal) {
+                    document.getElementById('edit-skills-id').value = button.dataset.id;
+                    document.getElementById('edit-skills-title').value = button.dataset.title;
+                    document.getElementById('edit-skills-type').value = button.dataset.type;
+                    document.getElementById('edit-skills-description').value = button.dataset.description;
+                    document.getElementById('edit-skills-thumbnail').value = button.dataset.thumbnail || '';
+                    if (typeof editModal.showPopover === 'function') editModal.showPopover();
+                }
+                return;
+            }
+
+            if (action === 'delete') {
+                if (!window.confirm('Delete this skill?')) return;
+                button.disabled = true;
+                try {
+                    await writeSkill(skillEndpoint(DETAIL_SKILLS_ENDPOINT, button.dataset.id), 'DELETE');
+                    showToast('Success', 'Skill deleted.', 'success');
+                    await fetchSkills(searchInput.value.trim());
+                } catch (error) {
+                    showToast('Request failed', error.message, 'error');
+                } finally {
+                    button.disabled = false;
+                }
+            }
+        });
+
+        // Search inputs
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchDebounceTimer);
+            searchDebounceTimer = setTimeout(() => fetchSkills(searchInput.value.trim()), 300);
+        });
+
+        searchForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            clearTimeout(searchDebounceTimer);
+            fetchSkills(searchInput.value.trim());
+        });
+    </script>
 {% endblock content %}
-</html>

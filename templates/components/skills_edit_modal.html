@@ -1,0 +1,69 @@
+<div id="edit-skills-modal"
+     class="project-form-modal"
+     popover="auto"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="edit-skills-modal-title">
+    <button type="button"
+            class="project-form-modal__backdrop"
+            popovertarget="edit-skills-modal"
+            popovertargetaction="hide"
+            aria-label="Close edit skill form"></button>
+
+    <div class="project-form-modal__content">
+        <button type="button"
+                class="project-form-modal__close"
+                popovertarget="edit-skills-modal"
+                popovertargetaction="hide"
+                aria-label="Close edit skill form">×</button>
+
+        <h2 id="edit-skills-modal-title">Edit Skill</h2>
+        <form id="edit-skills-form" class="project-form">
+            {% csrf_token %}
+            <input type="hidden" id="edit-skills-id" name="id">
+            <div class="form-group">
+                <label for="edit-skills-title">Skill Title</label>
+                <input type="text"
+                       id="edit-skills-title"
+                       name="title"
+                       required
+                       maxlength="255"
+                       class="skill-search__input"
+                       style="width: 100%;">
+            </div>
+            <div class="form-group">
+                <label for="edit-skills-type">Skill Type</label>
+                <select id="edit-skills-type" name="type" class="skill-search__input" style="width: 100%;">
+                    <option value="programming">Programming</option>
+                    <option value="design">Design</option>
+                    <option value="art">Art</option>
+                    <option value="writing">Writing</option>
+                    <option value="baking">Baking</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="edit-skills-description">Description</label>
+                <textarea id="edit-skills-description"
+                          name="description"
+                          rows="3"
+                          class="skill-search__input"
+                          style="width: 100%;"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="edit-skills-thumbnail">Thumbnail URL</label>
+                <input type="url"
+                       id="edit-skills-thumbnail"
+                       name="thumbnail"
+                       class="skill-search__input"
+                       style="width: 100%;">
+            </div>
+            <div class="project-form-modal__actions">
+                <button type="button"
+                        class="button button-secondary"
+                        popovertarget="edit-skills-modal"
+                        popovertargetaction="hide">Cancel</button>
+                <button type="submit" class="button">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>

@@ -57,6 +57,10 @@
         {% include "components/atelier_form_modal.html" %}
     {% endif %}
 
+    {% if user.is_superuser or is_editor %}
+        {% include "components/atelier_edit_modal.html" %}
+    {% endif %}
+
     {% csrf_token %}
     <script>
         // Configuration
@@ -64,6 +68,8 @@
         const DETAIL_ATELIER_ENDPOINT = "{% url 'api:atelier-detail' '00000000-0000-0000-0000-000000000000' %}";
         const STAR_ATELIER_ENDPOINT = "{% url 'api:atelier-star' '00000000-0000-0000-0000-000000000000' %}";
         const IS_SUPERUSER = "{{ user.is_superuser|yesno:'true,false' }}" === "true";
+        const IS_EDITOR = "{{ is_editor|yesno:'true,false' }}" === "true";
+        const CAN_EDIT = IS_SUPERUSER || IS_EDITOR;
         const IS_AUTHENTICATED = "{{ user.is_authenticated|yesno:'true,false' }}" === "true";
         let projectsAbortController;
         let searchDebounceTimer;
@@ -76,6 +82,7 @@
         const searchForm = document.getElementById('project-search-form');
         const searchInput = document.getElementById('search-input');
         const projectForm = document.getElementById('atelier-form');
+        const editProjectForm = document.getElementById('edit-atelier-form');
 
         const SEARCH_DEBOUNCE_DELAY = 300;
 
@@ -123,15 +130,16 @@
             const articleElement = document.createElement('article');
             articleElement.style.position = 'relative';
 
-            let actionsHtml = '';
-            if (IS_AUTHENTICATED || IS_SUPERUSER) {
+            let buttons = [];
+
+            if (IS_AUTHENTICATED) {
                 const isStarredClass = project.is_starred ? " is-starred" : "";
                 const starText = project.is_starred ? "Unstar" : "Star";
                 const starTitle = project.star_count > 0 
                     ? `Starred by ${escapeHtml(project.starred_by_names)}` 
                     : "Be the first to star";
 
-                const starBtn = IS_AUTHENTICATED ? `
+                buttons.push(`
                     <button type="button"
                             class="button button-star${isStarredClass}"
                             data-action="star"
@@ -140,9 +148,31 @@
                         <span aria-hidden="true">★</span>
                         ${starText} <span class="star-count">${project.star_count}</span>
                     </button>
-                ` : '';
+                `);
+            } else {
+                buttons.push(`
+                    <a href="{% url 'main:login' %}" class="button">
+                        <span aria-hidden="true">★</span> Login to star (${project.star_count})
+                    </a>
+                `);
+            }
 
-                const deleteBtn = IS_SUPERUSER ? `
+            if (CAN_EDIT) {
+                buttons.push(`
+                    <button type="button"
+                            class="button button-edit"
+                            data-action="edit"
+                            data-id="${escapeHtml(project.id)}"
+                            data-title="${escapeHtml(project.title)}"
+                            data-url="${escapeHtml(project.project_url)}"
+                            data-image="${escapeHtml(project.image_url)}">
+                        Edit
+                    </button>
+                `);
+            }
+
+            if (IS_SUPERUSER) {
+                buttons.push(`
                     <button type="button"
                             class="button"
                             style="background-color: #dc3545; color: white;"
@@ -150,23 +180,14 @@
                             data-id="${escapeHtml(project.id)}">
                         Delete
                     </button>
-                ` : '';
-
-                actionsHtml = `
-                    <div style="position: absolute; top: 10px; right: 10px; z-index: 10; display: flex; gap: 8px;">
-                        ${starBtn}
-                        ${deleteBtn}
-                    </div>
-                `;
-            } else {
-                actionsHtml = `
-                    <div style="position: absolute; top: 10px; right: 10px; z-index: 10; display: flex; gap: 8px;">
-                        <a href="{% url 'main:login' %}" class="button">
-                            <span aria-hidden="true">★</span> Login to star (${project.star_count})
-                        </a>
-                    </div>
-                `;
+                `);
             }
+
+            const actionsHtml = `
+                <div style="position: absolute; top: 10px; right: 10px; z-index: 10; display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;">
+                    ${buttons.join('')}
+                </div>
+            `;
 
             // Sanitized image and URL checks
             const imageHtml = project.image_url 
@@ -188,8 +209,14 @@
         }
 
         function apiErrorMessage(data, status) {
-            const messages = Object.values(data).flat().filter(value => typeof value === 'string');
-            return messages.join(' ') || `Request failed (HTTP ${status}).`;
+            if (data && typeof data === 'object') {
+                if (typeof data.detail === 'string') {
+                    return data.detail;
+                }
+                const messages = Object.values(data).flat().filter(value => typeof value === 'string');
+                if (messages.length > 0) return messages.join(' ');
+            }
+            return `Request failed (HTTP ${status}).`;
         }
 
         async function writeProject(url, method, payload) {
@@ -253,7 +280,14 @@
             }
         }
 
-        // Send the form data to the server
+        function closeEditModal() {
+            const modal = document.getElementById("edit-atelier-modal");
+            if (modal && typeof modal.hidePopover === 'function') {
+                modal.hidePopover();
+            }
+        }
+
+        // Send the add form data to the server
         async function addProject(event) {
             event.preventDefault();
 
@@ -286,14 +320,68 @@
             }
         }
 
+        // Send the edit form data to the server
+        async function editProject(event) {
+            event.preventDefault();
+
+            const submitButton = editProjectForm.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+
+            try {
+                const projectId = document.getElementById('edit-atelier-id').value;
+                const payload = {
+                    title: document.getElementById('edit-atelier-title').value,
+                    project_url: document.getElementById('edit-atelier-url').value,
+                    image_url: document.getElementById('edit-atelier-image').value,
+                };
+
+                await writeProject(projectEndpoint(DETAIL_ATELIER_ENDPOINT, projectId), 'PATCH', payload);
+                editProjectForm.reset();
+                closeEditModal();
+
+                if (typeof showToast === "function") {
+                    showToast('Success', 'Project updated.', 'success');
+                }
+
+                await fetchProjects(searchInput.value.trim());
+            } catch (error) {
+                if (typeof showToast === "function") {
+                    showToast('Could not update project', error.message, 'error');
+                } else {
+                    alert('Could not update project: ' + error.message);
+                }
+            } finally {
+                submitButton.disabled = false;
+            }
+        }
+
         if (projectForm) {
             projectForm.addEventListener('submit', addProject);
+        }
+
+        if (editProjectForm) {
+            editProjectForm.addEventListener('submit', editProject);
         }
 
         gridContainer.addEventListener('click', async function(event) {
             const button = event.target.closest('button[data-action]');
             if (!button || button.disabled) return;
             const action = button.dataset.action;
+
+            if (action === 'edit') {
+                const editModal = document.getElementById('edit-atelier-modal');
+                if (editModal) {
+                    document.getElementById('edit-atelier-id').value = button.dataset.id;
+                    document.getElementById('edit-atelier-title').value = button.dataset.title;
+                    document.getElementById('edit-atelier-url').value = button.dataset.url;
+                    document.getElementById('edit-atelier-image').value = button.dataset.image;
+                    if (typeof editModal.showPopover === 'function') {
+                        editModal.showPopover();
+                    }
+                }
+                return;
+            }
+
             if (action === 'delete' && !window.confirm('Delete this project?')) return;
             button.disabled = true;
             try {

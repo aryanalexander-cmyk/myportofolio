@@ -65,11 +65,17 @@ def show_experience(request):
     experiences = serializers.deserialize("json", json_response.content.decode("utf-8"))
     experiences = [exp.object for exp in experiences] 
     title_query = request.GET.get("title", "").strip()
+    is_editor = (
+        request.user.is_authenticated
+        and request.user.groups.filter(name="Editor").exists()
+    )
 
     context = {
         "name": "Aryan Alexander Rinaldi",
         "experience_list": experiences,
         "title_query": title_query,
+        "form": ExperienceForm(),
+        "is_editor": is_editor,
     }
     return render(request, "experience.html", context)
 
@@ -109,11 +115,16 @@ def get_experience_json(request):
 # --- ATELIER VIEWS ---
 def show_atelier(request): 
     title_query = request.GET.get("title", "").strip()
+    is_editor = (
+        request.user.is_authenticated
+        and request.user.groups.filter(name="Editor").exists()
+    )
 
     context = {
         "name": "Aryan Alexander Rinaldi",
         "title_query": title_query,
         "form": AtelierForm(),
+        "is_editor": is_editor,
     }
     return render(request, "atelier.html", context)
 
@@ -180,11 +191,17 @@ def show_skills(request):
     )
     skills = [skill.object for skill in skills] 
     title_query = request.GET.get("title", "").strip()
+    is_editor = (
+        request.user.is_authenticated
+        and request.user.groups.filter(name="Editor").exists()
+    )
 
     context = {
         "name": "Aryan Alexander Rinaldi",
         "skills_list": skills,
         "title_query": title_query,
+        "form": SkillsForm(),
+        "is_editor": is_editor,
     }
     return render(request, "skills.html", context)
 
